@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Nanum+Myeongjo:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #12120f; font-family: "Noto Sans KR", sans-serif; color: #1a1913; word-break: keep-all; text-wrap: pretty; }
+  * { box-sizing: border-box; }
+  button { white-space: nowrap; flex-shrink: 0; }
+  input, textarea, select { font-family: inherit; }
+  a { color: #8a6a2f; }
+  a:hover { color: #6b511f; }
+  ::selection { background: #e8d9b0; }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; background: radial-gradient(120% 90% at 50% 0%, #1f1e19 0%, #12120f 55%); padding: 0 0 90px">
+
+  <header style="padding: 52px 24px 40px; text-align: center; border-bottom: 1px solid #2e2c24">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.42em; text-transform: uppercase; color: #a08a5b">seat &amp; group draw &nbsp;·&nbsp; made by chxnho</div>
+    <h1 style="margin: 14px 0 0; font-family: 'Nanum Myeongjo', serif; font-weight: 800; font-size: 44px; letter-spacing: -0.01em; color: #f3ecdc">모둠 자리 뽑기</h1>
+    <div style="width: 46px; height: 1px; background: #a08a5b; margin: 20px auto 0"></div>
+    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 22px; flex-wrap: wrap; font-size: 14px; font-weight: 700">
+      <span style="padding: 8px 16px; background: rgba(243,236,220,0.06); border: 1px solid #3a382e; border-radius: 999px; color: #e6dfcd; white-space: nowrap">전체 {{ total }}명</span>
+      <span style="padding: 8px 16px; background: rgba(122,160,214,0.1); border: 1px solid #33445c; border-radius: 999px; color: #9dbbe4; white-space: nowrap">남 {{ maleCount }}</span>
+      <span style="padding: 8px 16px; background: rgba(214,138,146,0.1); border: 1px solid #5c3a3e; border-radius: 999px; color: #e3a9af; white-space: nowrap">여 {{ femaleCount }}</span>
+    </div>
+  </header>
+
+  <div style="max-width: 1120px; margin: 0 auto; padding: 34px 24px 0; display: flex; flex-direction: column; gap: 20px">
+
+    <!-- STEP 1 -->
+    <section style="background: #fbf8f1; border: 1px solid #e3dbc9; border-radius: 4px; padding: 28px; box-shadow: 0 18px 40px rgba(0,0,0,0.35)">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #eae2d0">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #a08a5b">STEP 01</span>
+        <h2 style="margin: 0; font-family: 'Nanum Myeongjo', serif; font-size: 23px; font-weight: 800">학생 명단</h2>
+      </div>
+      <p style="margin: 14px 0 12px; font-size: 13px; color: #7d745f; line-height: 1.7">한 줄에 <b>이름 성별</b>로 입력합니다.</p>
+      <textarea value="{{ input }}" onChange="{{ onInput }}" spellcheck="false" placeholder="홍길동 남&#10;이춘향 여" style="width: 100%; min-height: 148px; resize: vertical; padding: 16px; font-size: 15px; line-height: 1.8; border: 1px solid #e3dbc9; border-radius: 3px; background: #fffdf8; color: #1a1913"></textarea>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center">
+        <button onClick="{{ applyRoster }}" style="padding: 11px 22px; font-size: 14px; font-weight: 700; color: #fbf8f1; background: #1a1913; border: none; border-radius: 2px; cursor: pointer; letter-spacing: 0.02em" style-hover="background: #3a3527">명단 적용</button>
+        <button onClick="{{ clearRoster }}" style="padding: 11px 16px; font-size: 14px; color: #4a4535; background: transparent; border: 1px solid #dbd2bd; border-radius: 2px; cursor: pointer" style-hover="border-color: #a08a5b">전체 비우기</button>
+        <span style="flex: 1; min-width: 12px"></span>
+        <input value="{{ rosterName }}" onChange="{{ onRosterName }}" placeholder="저장 이름 (예: 1-1반)" style="width: 180px; padding: 11px 14px; font-size: 14px; border: 1px solid #e3dbc9; border-radius: 2px; background: #fffdf8" />
+        <button onClick="{{ saveSlot }}" style="padding: 11px 18px; font-size: 14px; font-weight: 700; color: #1a1913; background: #d8c48e; border: none; border-radius: 2px; cursor: pointer" style-hover="background: #e6d5a8">명단·조건 저장</button>
+      </div>
+      <sc-if value="{{ hasSlots }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eae2d0">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #a08a5b">SAVED</span>
+          <sc-for list="{{ slots }}" as="slot" hint-placeholder-count="0">
+            <span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; background: #f4efe2; border: 1px solid #e3dbc9; border-radius: 999px; font-size: 13px">
+              <button onClick="{{ slot.load }}" style="border: none; background: none; padding: 0; font-size: 13px; font-weight: 700; cursor: pointer; color: #1a1913">{{ slot.label }}</button>
+              <button onClick="{{ slot.remove }}" title="삭제" style="border: none; background: #e3dbc9; color: #7d745f; width: 20px; height: 20px; line-height: 1; border-radius: 999px; cursor: pointer; font-size: 13px">×</button>
+            </span>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px">
+        <button onClick="{{ pickRosterFile }}" style="padding: 8px 14px; font-size: 12.5px; color: #7d745f; background: transparent; border: 1px solid #e3dbc9; border-radius: 999px; cursor: pointer" style-hover="color: #1a1913">명단 파일 가져오기</button>
+        <button onClick="{{ exportRoster }}" style="padding: 8px 14px; font-size: 12.5px; color: #7d745f; background: transparent; border: 1px solid #e3dbc9; border-radius: 999px; cursor: pointer" style-hover="color: #1a1913">명단 파일로 내보내기</button>
+        <input type="file" accept=".txt,.json" ref="{{ rosterFileRef }}" onChange="{{ onRosterFile }}" style="display: none" />
+      </div>
+    </section>
+
+    <!-- STEP 2 : 접힌 상태 -->
+    <sc-if value="{{ step2Hidden }}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; background: rgba(243,236,220,0.05); border: 1px solid #2e2c24; border-radius: 4px; padding: 16px 22px">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #a08a5b">STEP 02</span>
+        <span style="font-size: 14px; color: #cfc6ae; font-weight: 700">제한 조건 {{ constraintCount }}개 설정됨</span>
+        <span style="font-size: 13px; color: #8a8371">{{ constraintSummary }}</span>
+        <span style="flex: 1; min-width: 10px"></span>
+        <button onClick="{{ toggleStep2 }}" style="padding: 9px 18px; font-size: 13px; font-weight: 700; color: #1a1913; background: #d8c48e; border: none; border-radius: 2px; cursor: pointer" style-hover="background: #e6d5a8">제한 조건 펼치기</button>
+      </section>
+    </sc-if>
+
+    <!-- STEP 2 -->
+    <sc-if value="{{ step2Open }}" hint-placeholder-val="{{ true }}">
+      <section style="background: #fbf8f1; border: 1px solid #e3dbc9; border-radius: 4px; padding: 28px; box-shadow: 0 18px 40px rgba(0,0,0,0.35)">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #eae2d0">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #a08a5b">STEP 02</span>
+          <h2 style="margin: 0; font-family: 'Nanum Myeongjo', serif; font-size: 23px; font-weight: 800">제한 조건</h2>
+          <span style="flex: 1; min-width: 10px"></span>
+          <button onClick="{{ toggleStep2 }}" style="padding: 8px 16px; font-size: 13px; color: #4a4535; background: transparent; border: 1px solid #dbd2bd; border-radius: 2px; cursor: pointer" style-hover="border-color: #a08a5b">이 단계 숨기기</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0 14px">
+          <span style="font-size: 13px; color: #7d745f">이름을 <b>두 번 차례로</b> 누르면 조건이 만들어집니다 →</span>
+          <sc-for list="{{ pairModes }}" as="opt" hint-placeholder-count="2">
+            <button onClick="{{ opt.click }}" style="{{ opt.style }}">{{ opt.label }}</button>
+          </sc-for>
+        </div>
+        <p style="margin: 0 0 16px; font-size: 13px; color: #a08a5b; min-height: 20px">{{ selHint }}</p>
+
+        <sc-if value="{{ hasStudents }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; flex-wrap: wrap; gap: 7px">
+              <sc-for list="{{ maleChips }}" as="chip" hint-placeholder-count="12">
+                <button onClick="{{ chip.click }}" style="{{ chip.style }}">{{ chip.name }}</button>
+              </sc-for>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px">
+              <sc-for list="{{ femaleChips }}" as="chip" hint-placeholder-count="12">
+                <button onClick="{{ chip.click }}" style="{{ chip.style }}">{{ chip.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noStudents }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 28px; text-align: center; font-size: 14px; color: #a09781; background: #f4efe2; border: 1px dashed #e3dbc9; border-radius: 3px">먼저 STEP 01에서 명단을 적용해 주세요.</div>
+        </sc-if>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #eae2d0">
+          <span style="font-size: 14px; font-weight: 700">조건 {{ constraintCount }}개</span>
+          <input value="{{ search }}" onChange="{{ onSearch }}" placeholder="이름 검색" style="width: 140px; padding: 8px 13px; font-size: 13px; border: 1px solid #e3dbc9; border-radius: 999px; background: #fffdf8" />
+          <span style="flex: 1; min-width: 10px"></span>
+          <button onClick="{{ pickConstraintFile }}" style="padding: 8px 14px; font-size: 12.5px; color: #7d745f; background: transparent; border: 1px solid #e3dbc9; border-radius: 999px; cursor: pointer" style-hover="color: #1a1913">조건 파일 가져오기</button>
+          <button onClick="{{ exportConstraints }}" style="padding: 8px 14px; font-size: 12.5px; color: #7d745f; background: transparent; border: 1px solid #e3dbc9; border-radius: 999px; cursor: pointer" style-hover="color: #1a1913">조건 파일로 내보내기</button>
+          <button onClick="{{ clearConstraints }}" style="padding: 8px 14px; font-size: 12.5px; color: #9d4a52; background: transparent; border: 1px solid #eccfd2; border-radius: 999px; cursor: pointer" style-hover="background: #fbeef0">전체 삭제</button>
+          <input type="file" accept=".txt,.json" ref="{{ constraintFileRef }}" onChange="{{ onConstraintFile }}" style="display: none" />
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px">
+          <sc-for list="{{ constraintItems }}" as="c" hint-placeholder-count="4">
+            <span style="{{ c.wrapStyle }}">
+              <b style="{{ c.styleA }}">{{ c.a }}</b>
+              <span style="{{ c.opStyle }}">{{ c.op }}</span>
+              <b style="{{ c.styleB }}">{{ c.b }}</b>
+              <button onClick="{{ c.remove }}" title="삭제" style="border: none; background: #e3dbc9; color: #7d745f; width: 20px; height: 20px; line-height: 1; border-radius: 999px; cursor: pointer; font-size: 13px">×</button>
+            </span>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- STEP 3 -->
+    <section style="background: #fbf8f1; border: 1px solid #e3dbc9; border-radius: 4px; padding: 28px; box-shadow: 0 18px 40px rgba(0,0,0,0.35)">
+      <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid #eae2d0">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.2em; color: #a08a5b">STEP 03</span>
+        <h2 style="margin: 0; font-family: 'Nanum Myeongjo', serif; font-size: 23px; font-weight: 800">모둠 조건</h2>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #a08a5b">성별 구성</span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <sc-for list="{{ modeOptions }}" as="opt" hint-placeholder-count="4">
+              <button onClick="{{ opt.click }}" title="{{ opt.hint }}" style="{{ opt.style }}">{{ opt.label }}</button>
+            </sc-for>
+            <span style="width: 1px; background: #e3dbc9; margin: 2px 6px"></span>
+            <button onClick="{{ min2Option.click }}" title="{{ min2Option.hint }}" style="{{ min2Option.style }}">{{ min2Option.label }}</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 30px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #a08a5b">모둠당 인원</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <sc-for list="{{ sizeOptions }}" as="opt" hint-placeholder-count="5">
+                <button onClick="{{ opt.click }}" style="{{ opt.style }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #a08a5b">모둠 수</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <sc-for list="{{ countOptions }}" as="opt" hint-placeholder-count="6">
+                <button onClick="{{ opt.click }}" style="{{ opt.style }}">{{ opt.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #a08a5b">추가 규칙</span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+            <button onClick="{{ repeatOption.click }}" title="{{ repeatOption.hint }}" style="{{ repeatOption.style }}">{{ repeatOption.label }}</button>
+            <button onClick="{{ prevLoad.click }}" title="{{ prevLoad.hint }}" style="{{ prevLoad.style }}">{{ prevLoad.label }}</button>
+            <span style="font-size: 12.5px; color: #6b6353">{{ prevLoad.status }}</span>
+            <input type="file" accept=".txt,.json" ref="{{ prevFileRef }}" onChange="{{ onPrevFile }}" style="display: none" />
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 26px; padding-top: 22px; border-top: 1px solid #eae2d0">
+        <button onClick="{{ draw }}" style="padding: 17px 40px; font-family: 'Nanum Myeongjo', serif; font-size: 19px; font-weight: 800; color: #e6d5a8; background: #1a1913; border: none; border-radius: 2px; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 8px 22px rgba(26,25,19,0.25)" style-hover="background: #3a3527">자리 뽑기</button>
+        <span style="font-size: 14px; color: #7d745f; line-height: 1.6; flex: 1; min-width: 240px">{{ planText }}</span>
+      </div>
+      <sc-if value="{{ hasNote }}" hint-placeholder-val="{{ false }}">
+        <div style="{{ noteStyle }}">{{ note }}</div>
+      </sc-if>
+    </section>
+
+    <!-- 결과 -->
+    <sc-if value="{{ hasGroups }}" hint-placeholder-val="{{ false }}">
+      <section style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <h2 style="margin: 0; font-family: 'Nanum Myeongjo', serif; font-size: 24px; font-weight: 800; color: #f3ecdc">자리 배치 결과</h2>
+          <span style="font-size: 13px; color: #8a8371">{{ resultMeta }}</span>
+          <span style="flex: 1; min-width: 10px"></span>
+          <button onClick="{{ saveImage }}" style="padding: 11px 20px; font-size: 14px; font-weight: 700; color: #1a1913; background: #d8c48e; border: none; border-radius: 2px; cursor: pointer" style-hover="background: #e6d5a8">이미지로 저장</button>
+          <button onClick="{{ saveText }}" style="padding: 11px 16px; font-size: 14px; color: #cfc6ae; background: transparent; border: 1px solid #4a4738; border-radius: 2px; cursor: pointer" style-hover="border-color: #a08a5b">텍스트로 저장</button>
+        </div>
+        <div style="background: #fbf8f1; border: 1px solid #e3dbc9; border-radius: 4px; padding: 30px; box-shadow: 0 18px 40px rgba(0,0,0,0.35)">
+          <div style="max-width: 560px; margin: 0 auto 30px; padding: 13px; text-align: center; background: #232b26; color: #cfe0d5; border-radius: 3px; font-family: 'Nanum Myeongjo', serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5em">칠판</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 18px">
+            <sc-for list="{{ groupCards }}" as="g" hint-placeholder-count="6">
+              <div style="{{ g.style }}">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px">
+                  <span style="{{ g.badgeStyle }}">{{ g.num }}</span>
+                  <span style="font-family: 'Nanum Myeongjo', serif; font-size: 17px; font-weight: 800">모둠</span>
+                  <span style="flex: 1"></span>
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6b6353; white-space: nowrap">{{ g.meta }}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                  <sc-for list="{{ g.members }}" as="m" hint-placeholder-count="4">
+                    <div style="{{ m.style }}">{{ m.name }}</div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultGenderMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;mix&quot;,&quot;same&quot;,&quot;solo&quot;,&quot;any&quot;],&quot;default&quot;:&quot;mix&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;기본 설정&quot;},&quot;targetGroupSize&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:3,&quot;max&quot;:6,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;기본 설정&quot;},&quot;cheerOnSuccess&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;기본 설정&quot;}}">
+class Component extends DCLogic {
+  state = {
+    input: "", students: [], constraints: [], sel: [], search: "",
+    pairMode: "apart", step2: true,
+    mode: null, perGroup: 0, groupCount: 0,
+    ruleMin2: false, ruleAvoidRepeat: false,
+    groups: null, reveal: 0, lastTries: 0, lastViolations: 0,
+    note: "", noteKind: "info", rosterName: "", slots: {}, prevPairs: [], prevLabel: ""
+  };
+
+  componentDidMount() {
+    this.rosterFileRef = React.createRef();
+    this.constraintFileRef = React.createRef();
+    this.prevFileRef = React.createRef();
+    try {
+      const raw = localStorage.getItem("jaripick.slots.v1");
+      if (raw) this.setState({ slots: JSON.parse(raw) || {} });
+      const pp = localStorage.getItem("jaripick.prevpairs.v1");
+      if (pp) this.setState({ prevPairs: JSON.parse(pp) || [] });
+    } catch (e) {}
+    this.forceUpdate();
+  }
+
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  // ---------- 저장 / 파싱 ----------
+  say(note, kind) { this.setState({ note: note, noteKind: kind || "info" }); }
+
+  persistSlots(slots) {
+    this.setState({ slots: slots });
+    try { localStorage.setItem("jaripick.slots.v1", JSON.stringify(slots)); } catch (e) {}
+  }
+
+  parseRoster(text) {
+    const t = (text || "").trim();
+    if (!t) return [];
+    if (t[0] === "[") {
+      try {
+        const arr = JSON.parse(t);
+        const out = arr.filter(x => Array.isArray(x) && x.length).map(x => ({
+          name: String(x[0]).trim(), gender: String(x[1]).indexOf("여") === 0 ? "여" : "남"
+        }));
+        if (out.length) return out;
+      } catch (e) {}
+    }
+    const out = [];
+    t.split(/\r?\n/).forEach(line => {
+      line.split(/[,\t;]/).forEach(part => {
+        const p = part.trim();
+        if (!p) return;
+        const bits = p.split(/\s+/);
+        let gender = "남", name = p;
+        if (bits.length >= 2 && /^(남|여|남자|여자|m|f|M|F)$/.test(bits[bits.length - 1])) {
+          const g = bits.pop();
+          gender = /^(여|여자|f|F)$/.test(g) ? "여" : "남";
+          name = bits.join(" ");
+        }
+        if (name) out.push({ name: name, gender: gender });
+      });
+    });
+    return out;
+  }
+
+  rosterToText(list) { return list.map(s => s.name + " " + s.gender).join("\n"); }
+
+  download(filename, text, type) {
+    const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // ---------- 계획 (미리보기와 실제 배치가 공유) ----------
+  effMode() { return this.state.mode || this.props.defaultGenderMode || "mix"; }
+
+  targetFor(n) {
+    if (this.state.perGroup) return this.state.perGroup;
+    const pref = this.props.targetGroupSize || 5;
+    return n <= 24 ? Math.min(4, pref) : pref;
+  }
+
+  sizes(n, g) {
+    const base = Math.floor(n / g), rem = n % g, arr = [];
+    for (let i = 0; i < g; i++) arr.push(base + (i < rem ? 1 : 0));
+    return arr;
+  }
+
+  computePlan(mode, gCount) {
+    const students = this.state.students;
+    const n = students.length;
+    const m = students.filter(x => x.gender === "남").length;
+    const f = n - m;
+    const empty = { groups: 0, sizes: [], male: [], female: [], minority: null };
+    if (!n) return empty;
+
+    if (mode === "same") {
+      const tm = this.targetFor(m), tf = this.targetFor(f);
+      let gm = m ? Math.max(1, Math.round(m / tm)) : 0;
+      let gf = f ? Math.max(1, Math.round(f / tf)) : 0;
+      if (gCount) {
+        gm = m ? Math.min(m, Math.max(1, Math.round(gCount * m / n))) : 0;
+        gf = f ? Math.min(f, Math.max(1, gCount - gm)) : 0;
+      }
+      const male = gm ? this.sizes(m, gm) : [];
+      const female = gf ? this.sizes(f, gf) : [];
+      return { groups: male.length + female.length, sizes: male.concat(female), male: male, female: female, minority: null };
+    }
+
+    if (mode === "solo") {
+      const minority = m <= f ? "남" : "여";
+      const minCount = Math.min(m, f);
+      if (!minCount) return this.computePlan("any", gCount);
+      let g = gCount || Math.max(1, Math.round(n / this.targetFor(n)));
+      g = Math.min(g, minCount);
+      const sizes = this.sizes(n, g);
+      return { groups: g, sizes: sizes, male: [], female: [], minority: minority };
+    }
+
+    const g = Math.min(n, gCount || Math.max(1, Math.round(n / this.targetFor(n))));
+    const sizes = this.sizes(n, g);
+    return { groups: sizes.length, sizes: sizes, male: [], female: [], minority: null };
+  }
+
+  // ---------- 배치 ----------
+  shuffle(a) {
+    const arr = a.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  dealRoundRobin(list, sizes) {
+    const groups = sizes.map(() => []);
+    let gi = 0;
+    list.forEach(st => {
+      let guard = 0;
+      while (groups[gi].length >= sizes[gi] && guard++ < sizes.length * 2) gi = (gi + 1) % sizes.length;
+      groups[gi].push(st);
+      gi = (gi + 1) % sizes.length;
+    });
+    return groups;
+  }
+
+  attempt(mode, gCount) {
+    const students = this.state.students;
+    const males = this.shuffle(students.filter(s => s.gender === "남"));
+    const females = this.shuffle(students.filter(s => s.gender === "여"));
+    const plan = this.computePlan(mode, gCount);
+
+    if (mode === "same") {
+      const out = [];
+      if (plan.male.length) this.dealRoundRobin(males, plan.male).forEach(g => out.push(g));
+      if (plan.female.length) this.dealRoundRobin(females, plan.female).forEach(g => out.push(g));
+      return out;
+    }
+
+    if (mode === "solo" && plan.minority) {
+      const minor = this.shuffle(plan.minority === "남" ? males : females);
+      const major = this.shuffle(plan.minority === "남" ? females : males);
+      const groups = plan.sizes.map(() => []);
+      const place = (list, startAt) => {
+        let gi = startAt % Math.max(1, groups.length);
+        list.forEach(st => {
+          let guard = 0;
+          while (groups[gi].length >= plan.sizes[gi] && guard++ < groups.length * 2) gi = (gi + 1) % groups.length;
+          groups[gi].push(st);
+          gi = (gi + 1) % groups.length;
+        });
+      };
+      // 소수 성별을 모둠마다 한 명씩 돌려가며 먼저 배치 (남는 인원도 계속 라운드로빈)
+      place(minor, 0);
+      place(this.shuffle(major), Math.floor(Math.random() * groups.length));
+      return groups;
+    }
+
+    if (mode === "any") return this.dealRoundRobin(this.shuffle(students), plan.sizes);
+
+    // 남녀 골고루 : 성별을 번갈아 세운 뒤 라운드로빈 배분
+    const interleaved = [];
+    const big = males.length >= females.length ? males : females;
+    const small = males.length >= females.length ? females : males;
+    const ratio = small.length ? big.length / small.length : 0;
+    let bi = 0, si = 0;
+    while (bi < big.length || si < small.length) {
+      const take = Math.max(1, Math.round(ratio));
+      for (let k = 0; k < take && bi < big.length; k++) interleaved.push(big[bi++]);
+      if (si < small.length) interleaved.push(small[si++]);
+    }
+    return this.dealRoundRobin(interleaved, plan.sizes);
+  }
+
+  score(groups, mode) {
+    const cs = this.state.constraints;
+    let violations = 0, soft = 0;
+    const where = {};
+    groups.forEach((g, i) => g.forEach(s => { where[s.name] = i; }));
+    cs.forEach(c => {
+      const a = where[c[0]], b = where[c[1]];
+      if (a === undefined || b === undefined) return;
+      const together = c[2] === "같이";
+      if (together ? a !== b : a === b) violations++;
+    });
+    if (mode === "solo") {
+      const plan = this.computePlan(mode, this.state.groupCount);
+      if (plan.minority) {
+        const counts = groups.map(g => g.filter(x => x.gender === plan.minority).length);
+        const lo = Math.min.apply(null, counts), hi = Math.max.apply(null, counts);
+        soft += (hi - lo) * 30;
+        counts.forEach(c => { if (c < 1) soft += 60; });
+      }
+    }
+    groups.forEach(g => {
+      const m = g.filter(x => x.gender === "남").length;
+      const f = g.length - m;
+      if (mode === "mix") soft += Math.abs(m - f) * 2;
+      if (this.state.ruleMin2 && (mode === "mix" || mode === "any") && g.length >= 4 && (m < 2 || f < 2)) soft += 40;
+    });
+    if (this.state.ruleAvoidRepeat && this.state.prevPairs.length) {
+      const set = {};
+      this.state.prevPairs.forEach(p => { set[p] = 1; });
+      groups.forEach(g => {
+        for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
+          const key = [g[i].name, g[j].name].sort().join("|");
+          if (set[key]) soft += 6;
+        }
+      });
+    }
+    return { violations: violations, total: violations * 1000 + soft };
+  }
+
+  pairsOf(groups) {
+    const out = [];
+    groups.forEach(g => {
+      for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) out.push([g[i].name, g[j].name].sort().join("|"));
+    });
+    return out;
+  }
+
+  draw = () => {
+    if (this.state.students.length < 2) { this.say("먼저 학생 명단을 적용해 주세요.", "error"); return; }
+    const mode = this.effMode();
+    const gCount = this.state.groupCount;
+    let best = null, bestScore = Infinity, tries = 0;
+    while (tries < 8000) {
+      tries++;
+      const groups = this.attempt(mode, gCount);
+      const sc = this.score(groups, mode);
+      if (sc.total < bestScore) { bestScore = sc.total; best = { groups: groups, v: sc.violations, tries: tries, score: sc.total }; }
+      if (bestScore === 0) break;
+      if (best.v === 0 && tries > 2500) break;
+    }
+    clearInterval(this.timer);
+    this.setState({ groups: best.groups, reveal: 0, lastTries: best.tries, lastViolations: best.v });
+    this.timer = setInterval(() => {
+      this.setState(s => {
+        if (!s.groups || s.reveal >= s.groups.length) { clearInterval(this.timer); return {}; }
+        return { reveal: s.reveal + 1 };
+      });
+    }, 200);
+    const pairs = this.pairsOf(best.groups);
+    this.setState({ prevPairs: pairs });
+    try { localStorage.setItem("jaripick.prevpairs.v1", JSON.stringify(pairs)); } catch (e) {}
+    if (best.v === 0) {
+      this.say(best.tries + "번째 시도에서 모든 제한 조건을 만족하는 배치를 찾았습니다.", "ok");
+      if (this.props.cheerOnSuccess !== false) {
+        try { const a = new Audio("cheer.mp3"); a.volume = 0.7; a.play(); } catch (e) {}
+      }
+    } else {
+      this.say("제한 조건을 모두 만족시킬 수 없어 위반 " + best.v + "건이 남은 최선의 배치를 보여줍니다. 모둠 수를 늘리거나 조건을 줄여 보세요.", "error");
+    }
+  };
+
+  // ---------- 명단 ----------
+  // 지난 배치 결과 파일 불러오기 (텍스트/JSON 모두 허용)
+  onPrevFile = e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const raw = String(ev.target.result || "").trim();
+      let groups = [];
+      if (raw[0] === "[") {
+        try {
+          const arr = JSON.parse(raw);
+          groups = arr.map(g => (Array.isArray(g) ? g.map(x => (Array.isArray(x) ? String(x[0]) : String(x)).trim()) : []));
+        } catch (err) { groups = []; }
+      }
+      if (!groups.length) {
+        groups = raw.split(/\r?\n/).map(line => {
+          const body = line.indexOf(":") >= 0 ? line.slice(line.indexOf(":") + 1) : line;
+          return body.split(/[,·、]/).map(s => s.trim()).filter(Boolean);
+        }).filter(g => g.length > 1);
+      }
+      if (!groups.length) { this.say("지난 배치 파일을 읽지 못했습니다. 이 프로그램에서 저장한 결과 파일을 넣어주세요.", "error"); return; }
+      const pairs = [];
+      groups.forEach(g => {
+        for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) pairs.push([g[i], g[j]].sort().join("|"));
+      });
+      this.setState({ prevPairs: pairs, prevLabel: file.name, ruleAvoidRepeat: true, groups: null });
+      try { localStorage.setItem("jaripick.prevpairs.v1", JSON.stringify(pairs)); } catch (err) {}
+      this.say("지난 배치(" + groups.length + "모둠)를 불러왔습니다. 이 배치와 최대한 겹치지 않게 뽑습니다.", "ok");
+    };
+    r.readAsText(file);
+    e.target.value = "";
+  };
+
+  applyRoster = () => {
+    const list = this.parseRoster(this.state.input);
+    if (!list.length) { this.say("명단을 읽지 못했습니다. 형식을 확인해 주세요.", "error"); return; }
+    const names = list.map(s => s.name);
+    const constraints = this.state.constraints.filter(c => names.indexOf(c[0]) >= 0 && names.indexOf(c[1]) >= 0);
+    this.setState({ students: list, constraints: constraints, sel: [], groups: null });
+    this.say(list.length + "명의 명단을 적용했습니다.", "ok");
+  };
+
+  clearRoster = () => {
+    this.setState({ input: "", students: [], constraints: [], sel: [], groups: null });
+    this.say("모두 비웠습니다.", "info");
+  };
+
+  saveSlot = () => {
+    const name = (this.state.rosterName || "").trim();
+    if (!name) { this.say("저장할 이름을 입력해 주세요.", "error"); return; }
+    if (!this.state.students.length) { this.say("적용된 명단이 없습니다.", "error"); return; }
+    const slots = Object.assign({}, this.state.slots);
+    slots[name] = { students: this.state.students, constraints: this.state.constraints };
+    this.persistSlots(slots);
+    this.say("'" + name + "' 명단과 제한 조건을 저장했습니다.", "ok");
+  };
+
+  loadSlot(name) {
+    const s = this.state.slots[name];
+    if (!s) return;
+    this.setState({
+      students: s.students || [], constraints: s.constraints || [],
+      input: this.rosterToText(s.students || []), rosterName: name, sel: [], groups: null
+    });
+    this.say("'" + name + "'을 불러왔습니다. (학생 " + (s.students || []).length + "명, 조건 " + (s.constraints || []).length + "개)", "ok");
+  }
+
+  removeSlot(name) {
+    const slots = Object.assign({}, this.state.slots);
+    delete slots[name];
+    this.persistSlots(slots);
+  }
+
+  onRosterFile = e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const list = this.parseRoster(ev.target.result);
+      if (!list.length) { this.say("파일을 읽지 못했습니다.", "error"); return; }
+      this.setState({ students: list, input: this.rosterToText(list), sel: [], groups: null });
+      this.say(file.name + " 에서 " + list.length + "명을 불러왔습니다.", "ok");
+    };
+    r.readAsText(file);
+    e.target.value = "";
+  };
+
+  exportRoster = () => {
+    if (!this.state.students.length) { this.say("내보낼 명단이 없습니다.", "error"); return; }
+    const json = JSON.stringify(this.state.students.map(s => [s.name, s.gender]));
+    this.download((this.state.rosterName || "학생") + " 명단.txt", "[\n" + json.slice(1, -1) + "\n]");
+  };
+
+  // ---------- 제한 조건 ----------
+  clickStudent(name) {
+    const sel = this.state.sel.slice();
+    const at = sel.indexOf(name);
+    if (at >= 0) { sel.splice(at, 1); this.setState({ sel: sel }); return; }
+    sel.push(name);
+    if (sel.length < 2) { this.setState({ sel: sel }); return; }
+    const a = sel[0], b = sel[1];
+    const together = this.state.pairMode === "together";
+    const dup = this.state.constraints.some(c =>
+      ((c[0] === a && c[1] === b) || (c[0] === b && c[1] === a)) && ((c[2] === "같이") === together));
+    if (dup) { this.setState({ sel: [] }); this.say(a + " · " + b + " 조건은 이미 있습니다.", "info"); return; }
+    const rule = together ? [a, b, "같이"] : [a, b];
+    this.setState({ constraints: this.state.constraints.concat([rule]), sel: [] });
+    this.say(a + (together ? " 와 " : " 와 ") + b + (together ? " 를 꼭 같은 모둠으로" : " 를 다른 모둠으로") + " 설정했습니다.", "ok");
+  }
+
+  removeConstraint(i) {
+    const cs = this.state.constraints.slice();
+    cs.splice(i, 1);
+    this.setState({ constraints: cs });
+  }
+
+  clearConstraints = () => { this.setState({ constraints: [] }); this.say("제한 조건을 모두 삭제했습니다.", "info"); };
+
+  onConstraintFile = e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const arr = JSON.parse(String(ev.target.result).trim());
+        const cs = arr.filter(c => Array.isArray(c) && c.length >= 2).map(c => {
+          const base = [String(c[0]).trim(), String(c[1]).trim()];
+          if (c[2] === "같이") base.push("같이");
+          return base;
+        });
+        this.setState({ constraints: cs });
+        this.say("제한 조건 " + cs.length + "개를 불러왔습니다.", "ok");
+      } catch (err) { this.say("제한 조건 파일을 읽지 못했습니다.", "error"); }
+    };
+    r.readAsText(file);
+    e.target.value = "";
+  };
+
+  exportConstraints = () => {
+    if (!this.state.constraints.length) { this.say("내보낼 제한 조건이 없습니다.", "error"); return; }
+    this.download((this.state.rosterName || "학생") + " 제한조건.txt", JSON.stringify(this.state.constraints, null, 2));
+  };
+
+  saveText = () => {
+    const g = this.state.groups || [];
+    const lines = g.map((grp, i) => (i + 1) + "모둠: " + grp.map(s => s.name).join(", "));
+    this.download((this.state.rosterName || "자리") + " 배치결과.txt", lines.join("\n"));
+  };
+
+  // ---------- 이미지 저장 ----------
+  saveImage = async () => {
+    const groups = this.state.groups || [];
+    if (!groups.length) return;
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+    const cols = groups.length <= 2 ? groups.length : groups.length <= 6 ? 3 : 4;
+    const rows = Math.ceil(groups.length / cols);
+    const maxMembers = Math.max.apply(null, groups.map(g => g.length));
+    const cardW = 306, seatH = 46, pad = 34, gap = 20;
+    const cardH = 74 + Math.ceil(maxMembers / 2) * (seatH + 10);
+    const W = pad * 2 + cols * cardW + (cols - 1) * gap;
+    const H = 226 + rows * cardH + (rows - 1) * gap + pad;
+    const c = document.createElement("canvas");
+    const dpr = 2;
+    c.width = W * dpr; c.height = H * dpr;
+    const x = c.getContext("2d");
+    x.scale(dpr, dpr);
+    x.fillStyle = "#fbf8f1"; x.fillRect(0, 0, W, H);
+    x.fillStyle = "#1a1913"; x.fillRect(0, 0, W, 6);
+    x.textBaseline = "middle";
+    x.fillStyle = "#a08a5b";
+    x.font = '500 12px "IBM Plex Mono", monospace';
+    x.fillText("SEAT & GROUP DRAW", pad, 44);
+    x.fillStyle = "#1a1913";
+    x.font = '800 32px "Nanum Myeongjo", serif';
+    x.fillText((this.state.rosterName ? this.state.rosterName + " " : "") + "모둠 자리 배치", pad, 78);
+    const d = new Date();
+    x.font = '400 14px "Noto Sans KR", sans-serif';
+    x.fillStyle = "#7d745f";
+    x.fillText(d.getFullYear() + "." + (d.getMonth() + 1) + "." + d.getDate() + "   전체 " + this.state.students.length + "명   " + groups.length + "모둠   " + this.modeLabel(), pad, 104);
+    x.strokeStyle = "#e3dbc9"; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(pad, 126); x.lineTo(W - pad, 126); x.stroke();
+    const bw = Math.min(520, W - pad * 2);
+    x.fillStyle = "#232b26";
+    x.beginPath(); x.roundRect((W - bw) / 2, 150, bw, 46, 3); x.fill();
+    x.fillStyle = "#cfe0d5";
+    x.font = '700 16px "Nanum Myeongjo", serif';
+    x.textAlign = "center";
+    x.fillText("칠  판", W / 2, 174);
+    x.textAlign = "left";
+    groups.forEach((g, i) => {
+      const cx = pad + (i % cols) * (cardW + gap);
+      const cy = 226 + Math.floor(i / cols) * (cardH + gap);
+      x.fillStyle = "#fffdf8";
+      x.strokeStyle = "#e3dbc9"; x.lineWidth = 1.4;
+      x.beginPath(); x.roundRect(cx, cy, cardW, cardH, 4); x.fill(); x.stroke();
+      x.fillStyle = "#1a1913";
+      x.beginPath(); x.arc(cx + 32, cy + 32, 14, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#e6d5a8";
+      x.font = '700 14px "IBM Plex Mono", monospace';
+      x.textAlign = "center";
+      x.fillText(String(i + 1), cx + 32, cy + 33);
+      x.textAlign = "left";
+      x.fillStyle = "#1a1913";
+      x.font = '800 18px "Nanum Myeongjo", serif';
+      x.fillText("모둠", cx + 54, cy + 33);
+      const m = g.filter(s => s.gender === "남").length;
+      x.font = '400 12px "IBM Plex Mono", monospace';
+      x.fillStyle = "#a09781";
+      x.textAlign = "right";
+      x.fillText(g.length + "명 · 남" + m + " 여" + (g.length - m), cx + cardW - 18, cy + 33);
+      x.textAlign = "center";
+      g.forEach((s, j) => {
+        const sw = (cardW - 36 - 10) / 2;
+        const sx = cx + 18 + (j % 2) * (sw + 10);
+        const sy = cy + 56 + Math.floor(j / 2) * (seatH + 10);
+        const male = s.gender === "남";
+        x.fillStyle = male ? "#eaf0f8" : "#f9ecee";
+        x.beginPath(); x.roundRect(sx, sy, sw, seatH, 3); x.fill();
+        x.fillStyle = male ? "#2c4f7c" : "#8f3a46";
+        x.font = '700 17px "Noto Sans KR", sans-serif';
+        x.fillText(s.name, sx + sw / 2, sy + seatH / 2 + 1);
+      });
+      x.textAlign = "left";
+    });
+    c.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (this.state.rosterName || "자리") + " 배치결과.png";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }, "image/png");
+  };
+
+  // ---------- 스타일 ----------
+  chipStyle(st, selected) {
+    const male = st.gender === "남";
+    return {
+      padding: "8px 15px", fontSize: 14, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+      borderRadius: 2, transition: "all .15s ease",
+      border: "1px solid " + (selected ? "#1a1913" : (male ? "#d3dceb" : "#ecd5d8")),
+      background: selected ? "#1a1913" : (male ? "#eaf0f8" : "#f9ecee"),
+      color: selected ? "#e6d5a8" : (male ? "#2c4f7c" : "#8f3a46")
+    };
+  }
+
+  nameStyle(name) {
+    const st = this.state.students.find(s => s.name === name);
+    const male = !st || st.gender === "남";
+    return { color: male ? "#2c4f7c" : "#8f3a46", fontWeight: 700, whiteSpace: "nowrap" };
+  }
+
+  darkPill(active) {
+    return {
+      padding: "9px 17px", fontSize: 14, fontWeight: 700, cursor: "pointer", borderRadius: 2, whiteSpace: "nowrap",
+      border: active ? "1px solid #d8c48e" : "1px solid #454236",
+      background: active ? "#d8c48e" : "transparent",
+      color: active ? "#1a1913" : "#b8b09a", transition: "all .15s ease"
+    };
+  }
+
+  lightPill(active, size) {
+    return {
+      padding: size === "wide" ? "9px 17px" : "8px 15px", fontSize: size === "wide" ? 13.5 : 13,
+      fontWeight: 700, cursor: "pointer", borderRadius: 2, whiteSpace: "nowrap",
+      border: "1px solid " + (active ? "#1a1913" : "#dbd2bd"),
+      background: active ? "#1a1913" : "transparent",
+      color: active ? "#e6d5a8" : "#7d745f", transition: "all .15s ease"
+    };
+  }
+
+  modeLabel() {
+    const m = this.effMode();
+    return m === "same" ? "같은 성별끼리" : m === "any" ? "성별 상관없이" : m === "solo" ? "소수 성별 1명씩" : "남녀 골고루";
+  }
+
+  renderVals() {
+    const s = this.state;
+    const mode = this.effMode();
+    const males = s.students.filter(x => x.gender === "남");
+    const females = s.students.filter(x => x.gender === "여");
+    const autoPlan = this.computePlan(mode, 0);
+    const plan = this.computePlan(mode, s.groupCount);
+
+    const chip = st => ({
+      name: st.name, style: this.chipStyle(st, s.sel.indexOf(st.name) >= 0),
+      click: () => this.clickStudent(st.name)
+    });
+
+    const q = s.search.trim();
+    const constraintItems = s.constraints.map((c, i) => ({ c: c, i: i }))
+      .filter(o => !q || o.c[0].indexOf(q) >= 0 || o.c[1].indexOf(q) >= 0)
+      .map(o => {
+        const together = o.c[2] === "같이";
+        return {
+          a: o.c[0], b: o.c[1], op: together ? "함께" : "분리",
+          styleA: this.nameStyle(o.c[0]), styleB: this.nameStyle(o.c[1]),
+          opStyle: {
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, letterSpacing: "0.08em",
+            padding: "2px 7px", borderRadius: 2, whiteSpace: "nowrap",
+            background: together ? "#e7efe9" : "#f1ece0",
+            color: together ? "#3d6b53" : "#8a7c58"
+          },
+          wrapStyle: {
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 7px 6px 13px",
+            background: "#fffdf8", border: "1px solid " + (together ? "#d8e5db" : "#e8e0cd"),
+            borderRadius: 2, fontSize: 13
+          },
+          remove: () => this.removeConstraint(o.i)
+        };
+      });
+
+    const pairModes = [
+      { key: "apart", label: "같은 모둠 금지" },
+      { key: "together", label: "꼭 같은 모둠" }
+    ].map(p => ({ label: p.label, style: this.lightPill(s.pairMode === p.key), click: () => this.setState({ pairMode: p.key, sel: [] }) }));
+
+    const pill = this.lightPill.bind(this);
+    const modeOptions = [
+      { key: "mix", label: "남녀 골고루", hint: "모든 모둠의 남녀 비율을 최대한 균등하게" },
+      { key: "same", label: "같은 성별끼리", hint: "남학생 모둠과 여학생 모둠을 따로 구성" },
+      { key: "solo", label: "소수 성별 1명씩", hint: "인원이 적은 성별을 모둠마다 1명씩 배치" },
+      { key: "any", label: "성별 상관없이", hint: "성별을 따지지 않고 완전 무작위" }
+    ].map(m => ({
+      label: m.label, hint: m.hint, style: pill(mode === m.key, "wide"),
+      click: () => this.setState({ mode: m.key, groups: null })
+    }));
+
+    const sizeOptions = [{ n: 0, label: "자동" }, { n: 3, label: "3명" }, { n: 4, label: "4명" }, { n: 5, label: "5명" }, { n: 6, label: "6명" }]
+      .map(o => ({ label: o.label, style: pill(s.perGroup === o.n, "wide"), click: () => this.setState({ perGroup: o.n, groups: null }) }));
+
+    const counts = [{ n: 0, label: "자동 (" + (autoPlan.groups || "-") + ")" }];
+    for (let n = 2; n <= 9; n++) counts.push({ n: n, label: n + "모둠" });
+    const countOptions = counts.map(o => ({
+      label: o.label, style: pill(s.groupCount === o.n, "wide"),
+      click: () => this.setState({ groupCount: o.n, groups: null })
+    }));
+
+    const min2Option = {
+      label: (s.ruleMin2 ? "✓ " : "") + "각 모둠 남·여 2명 이상",
+      hint: "4명 이상 모둠에 남녀가 각각 2명 이상 들어가도록",
+      style: pill(s.ruleMin2, "wide"), click: () => this.setState({ ruleMin2: !s.ruleMin2, groups: null })
+    };
+
+    const repeatOption = {
+      label: (s.ruleAvoidRepeat ? "✓ " : "") + "지난 배치와 겹치지 않게",
+      hint: "지난번 같은 모둠이던 짝을 최대한 피합니다",
+      style: pill(s.ruleAvoidRepeat, "wide"),
+      click: () => this.setState({ ruleAvoidRepeat: !s.ruleAvoidRepeat, groups: null })
+    };
+
+    const prevOn = s.ruleAvoidRepeat;
+    const prevLoad = {
+      label: "지난 배치 불러오기",
+      hint: prevOn ? "이 프로그램에서 저장한 '배치결과.txt'를 넣어주세요" : "'지난 배치와 겹치지 않게'를 먼저 켜주세요",
+      status: prevOn
+        ? (s.prevLabel ? "불러온 파일 : " + s.prevLabel : (s.prevPairs.length ? "직전에 뽑은 결과를 기준으로 피합니다" : "지난 결과 파일을 불러오면 그 배치를 피합니다"))
+        : "",
+      style: {
+        padding: "8px 15px", fontSize: 13, fontWeight: 700, borderRadius: 2, whiteSpace: "nowrap",
+        border: "1px solid " + (prevOn ? "#8d6f34" : "#e3dbc9"),
+        background: prevOn ? "#3d6b53" : "transparent",
+        color: prevOn ? "#eef5ef" : "#7d745f",
+        cursor: prevOn ? "pointer" : "not-allowed", transition: "all .15s ease"
+      },
+      click: () => {
+        if (!prevOn) { this.say("'지난 배치와 겹치지 않게'를 먼저 켜주세요.", "info"); return; }
+        if (this.prevFileRef && this.prevFileRef.current) this.prevFileRef.current.click();
+      }
+    };
+
+    const planText = s.students.length
+      ? this.modeLabel() + " · " + plan.groups + "모둠 · 모둠당 " + plan.sizes.join("·") + "명"
+        + (mode === "solo" && plan.minority
+          ? (males.length === females.length
+            ? " (남녀 수가 같아 " + plan.minority + "학생을 모둠마다 고르게 나눕니다)"
+            : " (각 모둠에 " + plan.minority + "학생 최소 1명, 나머지는 고르게)")
+          : "")
+      : "명단을 적용하면 학생 수에 맞춰 모둠이 자동으로 계산됩니다.";
+
+    const groups = s.groups || [];
+    const groupCards = groups.map((g, i) => {
+      const shown = i < s.reveal;
+      const m = g.filter(x => x.gender === "남").length;
+      return {
+        num: i + 1,
+        meta: g.length + "명 · 남" + m + " 여" + (g.length - m),
+        badgeStyle: {
+          width: 28, height: 28, borderRadius: 999, background: "#1a1913", color: "#e6d5a8",
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 500
+        },
+        style: {
+          background: "#fffdf8", border: "1px solid #e3dbc9", borderRadius: 3, padding: 18,
+          opacity: shown ? 1 : 0, transform: shown ? "translateY(0)" : "translateY(12px)",
+          transition: "opacity .4s ease, transform .4s ease"
+        },
+        members: g.map(st => ({
+          name: st.name,
+          style: {
+            padding: "12px 6px", textAlign: "center", fontSize: 15, fontWeight: 700, borderRadius: 2,
+            background: st.gender === "남" ? "#eaf0f8" : "#f9ecee",
+            color: st.gender === "남" ? "#2c4f7c" : "#8f3a46", whiteSpace: "nowrap"
+          }
+        }))
+      };
+    });
+
+    const noteStyle = {
+      marginTop: 18, padding: "13px 17px", borderRadius: 2, fontSize: 14, lineHeight: 1.6,
+      borderLeft: "2px solid " + (s.noteKind === "error" ? "#b06a63" : s.noteKind === "ok" ? "#3d6b53" : "#c9c0aa"),
+      background: s.noteKind === "error" ? "#fbf0ef" : s.noteKind === "ok" ? "#f2f6f2" : "#f4efe2",
+      color: s.noteKind === "error" ? "#8f3a46" : s.noteKind === "ok" ? "#31573f" : "#6b6353"
+    };
+
+    const slotNames = Object.keys(s.slots);
+    const togetherCount = s.constraints.filter(c => c[2] === "같이").length;
+
+    return {
+      input: s.input, onInput: e => this.setState({ input: e.target.value }),
+      rosterName: s.rosterName, onRosterName: e => this.setState({ rosterName: e.target.value }),
+      search: s.search, onSearch: e => this.setState({ search: e.target.value }),
+      total: s.students.length, maleCount: males.length, femaleCount: females.length,
+      hasStudents: s.students.length > 0, noStudents: s.students.length === 0,
+      maleChips: males.map(chip), femaleChips: females.map(chip),
+      selHint: s.sel.length === 1
+        ? s.sel[0] + " 선택됨 — 짝이 될 학생을 눌러주세요. (다시 누르면 취소)"
+        : (s.pairMode === "together" ? "지금은 '꼭 같은 모둠' 조건을 만듭니다." : "지금은 '같은 모둠 금지' 조건을 만듭니다."),
+      pairModes: pairModes,
+      constraintCount: s.constraints.length, constraintItems: constraintItems,
+      constraintSummary: s.constraints.length
+        ? "분리 " + (s.constraints.length - togetherCount) + "건 · 함께 " + togetherCount + "건"
+        : "설정된 조건이 없습니다",
+      step2: s.step2, step2Open: s.step2, step2Hidden: !s.step2,
+      toggleStep2: () => this.setState({ step2: !s.step2 }),
+      modeOptions: modeOptions, sizeOptions: sizeOptions, countOptions: countOptions,
+      min2Option: min2Option, repeatOption: repeatOption, prevLoad: prevLoad,
+      prevFileRef: this.prevFileRef, onPrevFile: this.onPrevFile,
+      planText: planText,
+      note: s.note, hasNote: !!s.note, noteStyle: noteStyle,
+      hasGroups: groups.length > 0, groupCards: groupCards,
+      resultMeta: groups.length ? this.modeLabel() + " · " + s.lastTries + "회 시도" + (s.lastViolations ? " · 조건 위반 " + s.lastViolations + "건" : " · 조건 완전 충족") : "",
+      slots: slotNames.map(n => ({ label: n, load: () => this.loadSlot(n), remove: () => this.removeSlot(n) })),
+      hasSlots: slotNames.length > 0,
+      applyRoster: this.applyRoster, clearRoster: this.clearRoster,
+      saveSlot: this.saveSlot, exportRoster: this.exportRoster, exportConstraints: this.exportConstraints,
+      clearConstraints: this.clearConstraints, draw: this.draw,
+      saveImage: this.saveImage, saveText: this.saveText,
+      rosterFileRef: this.rosterFileRef, constraintFileRef: this.constraintFileRef,
+      onRosterFile: this.onRosterFile, onConstraintFile: this.onConstraintFile,
+      pickRosterFile: () => this.rosterFileRef && this.rosterFileRef.current && this.rosterFileRef.current.click(),
+      pickConstraintFile: () => this.constraintFileRef && this.constraintFileRef.current && this.constraintFileRef.current.click()
+    };
+  }
+}
+
+</script>
+</body>
+</html>
