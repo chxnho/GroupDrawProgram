@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
 import vm from 'node:vm';
 
 // Run the actual inline application logic, with only browser/React side effects
@@ -58,7 +57,8 @@ test('contradictory hard rules report remaining violations without claiming math
 test('repeat-pair preference cannot override hard rules and remaining repeats are disclosed',()=>{
  const {app}=application({constraints:[['M1','F1','같이']],repeat:['F1|M1']});app.draw();assert.equal(app.state.lastViolations,0);assert.equal(app.state.lastGenderViolations,0);assert.ok(app.state.lastRepeatViolations>0);assert.match(app.renderVals().resultMeta,/지난 짝 겹침/);assert.doesNotMatch(app.renderVals().resultMeta,/조건 완전 충족/);
 });
-test('manual roster/constraint storage format and visual template remain unchanged',()=>{
+test('manual roster/constraint storage format and required controls survive redesign',()=>{
  const {app,stored}=application();app.componentDidMount();const previous=stored.get('jaripick.slots.v1');app.draw();assert.equal(stored.get('jaripick.slots.v1'),previous);assert.ok(stored.has('jaripick.prevpairs.v1'));app.state.rosterName='fixture';app.state.constraints=[['M1','F1','같이']];app.saveSlot();const slot=JSON.parse(stored.get('jaripick.slots.v1')).fixture;assert.deepEqual(Object.keys(slot).sort(),['constraints','students']);assert.deepEqual(slot.constraints,[['M1','F1','같이']]);assert.deepEqual(plain(app.parseRoster(app.rosterToText(app.state.students))),plain(app.state.students));
- const template=html.replace(/(<script[^>]*data-dc-script[^>]*>)[\s\S]*?(<\/script>)/,'$1LOGIC$2');assert.equal(createHash('sha256').update(template).digest('hex'),'a48da884413a206d0cab61e08d8fe7c236e3bad4e2b4bb08ceb8da90c31eb935');
+ for(const action of ['applyRoster','clearRoster','saveSlot','pickRosterFile','exportRoster','pickConstraintFile','exportConstraints','clearConstraints','draw','saveImage','saveText'])assert.ok(html.includes('onClick="{{ '+action+' }}"'),action);
+ assert.match(html,/<title>모둠 자리 랜덤 시스템 · 배움길<\/title>/);assert.match(html,/aria-label="학생 명단"/);
 });

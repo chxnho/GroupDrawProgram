@@ -1382,7 +1382,7 @@
       canvasStyleEl.textContent = `html,body{background:${bg}}#dc-root>.sc-host{position:relative}`;
     }
     function postDesignMode(mode) {
-      if (window.parent === window) return;
+      if (window.parent === window || new URLSearchParams(location.search).get("embed") === "1") return;
       try {
         window.parent.postMessage({ type: "__dc_design_mode", mode }, "*");
       } catch {
@@ -1405,6 +1405,7 @@
       }
     }
     window.addEventListener("message", (e) => {
+      if (new URLSearchParams(location.search).get("embed") === "1") return;
       const type = e.data && e.data.type;
       if (type === "__dc_theme") {
         const t = e.data.theme;
@@ -1852,7 +1853,7 @@
     baseCss.textContent = BASE_CSS;
     document.head.prepend(baseCss);
     const notifyHost = () => {
-      if (window.parent === window) return;
+      if (window.parent === window || new URLSearchParams(location.search).get("embed") === "1") return;
       const r = runtime.registry.entries[rootName];
       try {
         window.parent.postMessage(

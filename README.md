@@ -1,4 +1,4 @@
-# GroupDrawProgram
+# 모둠 자리 랜덤 시스템 · GroupDrawProgram
 
 학생 명단의 성별과 함께/분리 조건을 이용하는 정적 모둠 배치 도구입니다.
 제품 로직과 화면은 `index.html`에 있으며 GitHub Pages는 `main:/`을 게시합니다.
@@ -23,3 +23,11 @@ node --test tests/grouping.test.mjs
 
 실제 `index.html`의 로직을 결정적 난수와 가짜 React/브라우저 환경에서 실행합니다.
 실제 명단, 브라우저 저장소, 네트워크나 GitHub 계정을 사용하지 않습니다.
+
+## 화면과 포털 연동
+
+`baeumgil.css`는 배움길의 밝은·어두운 테마, 390px 화면, 키보드 포커스와 모션 감소를 지원합니다. 폰트는 `fonts/`의 Pretendard 3개를 자체 제공하며 라이선스는 `fonts/LICENSE.txt`에 있습니다. 이미지·텍스트 저장과 명단·조건 입출력은 기존 형식을 유지합니다. 결과 공개는 최대 1.2초이며 모션 감소 설정에서는 즉시 표시합니다.
+
+포털 주소는 `/tools/groups`입니다. GitHub Pages의 기존 origin을 유지해 iframe으로 표시합니다. `?embed=1&parentOrigin=<포털 origin>`은 중복 소개·테마 버튼을 숨기며 작업 컨트롤은 유지합니다. 브라우저의 저장소 분리 정책에 따라 iframe과 직접 연 화면의 저장 명단이 다를 수 있습니다.
+
+`tool-bridge.js`는 지정 운영 포털 `https://chxnho-learning-portal.chxnho.workers.dev`와 localhost/127.0.0.1 QA 부모만 허용합니다. 자식은 `{type:"baeumgil:ready"|"baeumgil:resize",height}`만 보내고, 부모의 `{type:"baeumgil:theme",theme:"light"|"dark"}`만 받습니다. 송수신 origin·source를 검사하며 명단·이름·계정·저장소 값은 전달하지 않습니다. embed 모드에서는 `support.js`의 기존 편집기 메시지를 사용하지 않습니다.
