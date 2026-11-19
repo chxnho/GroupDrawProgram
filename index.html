@@ -238,7 +238,7 @@ class Component extends DCLogic {
     pairMode: "apart", step2: true,
     mode: null, perGroup: 0, groupCount: 0,
     ruleMin2: false, ruleAvoidRepeat: false,
-    groups: null, reveal: 0, lastTries: 0, lastViolations: 0,
+    groups: null, reveal: 0, lastTries: 0, lastViolations: 0, lastGenderViolations: 0, lastRepeatViolations: 0,
     note: "", noteKind: "info", rosterName: "", slots: {}, prevPairs: [], prevLabel: ""
   };
 
@@ -347,7 +347,7 @@ class Component extends DCLogic {
       const minCount = Math.min(m, f);
       if (!minCount) return this.computePlan("any", gCount);
       let g = gCount || Math.max(1, Math.round(n / this.targetFor(n)));
-      g = Math.min(g, minCount);
+      g = Math.min(n, gCount ? g : Math.min(g, minCount));
       const sizes = this.sizes(n, g);
       return { groups: g, sizes: sizes, male: [], female: [], minority: minority };
     }
@@ -377,6 +377,30 @@ class Component extends DCLogic {
       gi = (gi + 1) % sizes.length;
     });
     return groups;
+  }
+
+  maleTargets(sizes, randomize) {
+    const n = this.state.students.length;
+    const m = this.state.students.filter(s => s.gender === "남").length;
+    const min2 = this.state.ruleMin2 && sizes.every(size => size >= 4)
+      && m >= sizes.length * 2 && n - m >= sizes.length * 2;
+    const lower = sizes.map(() => min2 ? 2 : 0);
+    const upper = sizes.map(size => size - (min2 ? 2 : 0));
+    const ideal = sizes.map(size => size * m / n);
+    const counts = ideal.map((value, i) => Math.max(lower[i], Math.min(upper[i], Math.floor(value))));
+    const indices = sizes.map((_, i) => i);
+    const order = randomize ? this.shuffle(indices) : indices;
+    let left = m - counts.reduce((sum, count) => sum + count, 0);
+    while (left) {
+      const up = left > 0;
+      const candidates = order.filter(i => up ? counts[i] < upper[i] : counts[i] > lower[i]);
+      candidates.sort((a, b) => up
+        ? (ideal[b] - counts[b]) - (ideal[a] - counts[a])
+        : (counts[b] - ideal[b]) - (counts[a] - ideal[a]));
+      counts[candidates[0]] += up ? 1 : -1;
+      left += up ? -1 : 1;
+    }
+    return counts;
   }
 
   attempt(mode, gCount) {
@@ -411,25 +435,20 @@ class Component extends DCLogic {
       return groups;
     }
 
-    if (mode === "any") return this.dealRoundRobin(this.shuffle(students), plan.sizes);
+    if (mode === "any" && !this.state.ruleMin2) return this.dealRoundRobin(this.shuffle(students), plan.sizes);
 
-    // 남녀 골고루 : 성별을 번갈아 세운 뒤 라운드로빈 배분
-    const interleaved = [];
-    const big = males.length >= females.length ? males : females;
-    const small = males.length >= females.length ? females : males;
-    const ratio = small.length ? big.length / small.length : 0;
-    let bi = 0, si = 0;
-    while (bi < big.length || si < small.length) {
-      const take = Math.max(1, Math.round(ratio));
-      for (let k = 0; k < take && bi < big.length; k++) interleaved.push(big[bi++]);
-      if (si < small.length) interleaved.push(small[si++]);
-    }
-    return this.dealRoundRobin(interleaved, plan.sizes);
+    // 정원별 성별 몫을 먼저 정한다. 교대 배열을 다시 라운드로빈으로
+    // 나누면 짝수 모둠 수에서 성별이 특정 모둠으로 갈리는 문제가 있다.
+    const targets = this.maleTargets(plan.sizes, true);
+    let mi = 0, fi = 0;
+    return plan.sizes.map((size, i) => this.shuffle(
+      males.slice(mi, mi += targets[i]).concat(females.slice(fi, fi += size - targets[i]))
+    ));
   }
 
   score(groups, mode) {
     const cs = this.state.constraints;
-    let violations = 0, soft = 0;
+    let violations = 0, genderViolations = 0, genderPenalty = 0, repeatPairs = 0;
     const where = {};
     groups.forEach((g, i) => g.forEach(s => { where[s.name] = i; }));
     cs.forEach(c => {
@@ -438,20 +457,27 @@ class Component extends DCLogic {
       const together = c[2] === "같이";
       if (together ? a !== b : a === b) violations++;
     });
-    if (mode === "solo") {
-      const plan = this.computePlan(mode, this.state.groupCount);
-      if (plan.minority) {
-        const counts = groups.map(g => g.filter(x => x.gender === plan.minority).length);
-        const lo = Math.min.apply(null, counts), hi = Math.max.apply(null, counts);
-        soft += (hi - lo) * 30;
-        counts.forEach(c => { if (c < 1) soft += 60; });
-      }
+    const n = this.state.students.length;
+    const male = this.state.students.filter(x => x.gender === "남").length;
+    const minority = male <= n - male ? "남" : "여";
+    if (mode === "mix") {
+      const sizes = groups.map(g => g.length), targets = this.maleTargets(sizes, false);
+      const actual = groups.reduce((sum, g) => sum + Math.abs(g.filter(x => x.gender === "남").length * n - g.length * male), 0);
+      const optimal = sizes.reduce((sum, size, i) => sum + Math.abs(targets[i] * n - size * male), 0);
+      genderPenalty += Math.max(0, actual - optimal);
+      if (actual > optimal) genderViolations++;
     }
     groups.forEach(g => {
       const m = g.filter(x => x.gender === "남").length;
       const f = g.length - m;
-      if (mode === "mix") soft += Math.abs(m - f) * 2;
-      if (this.state.ruleMin2 && (mode === "mix" || mode === "any") && g.length >= 4 && (m < 2 || f < 2)) soft += 40;
+      if (mode === "same" && m && f) { genderViolations++; genderPenalty += Math.min(m, f); }
+      if (mode === "solo") {
+        const count = minority === "남" ? m : f;
+        if (count !== 1) { genderViolations++; genderPenalty += Math.abs(count - 1); }
+      }
+      if (this.state.ruleMin2 && (m < 2 || f < 2)) {
+        genderViolations++; genderPenalty += Math.max(0, 2 - m) + Math.max(0, 2 - f);
+      }
     });
     if (this.state.ruleAvoidRepeat && this.state.prevPairs.length) {
       const set = {};
@@ -459,11 +485,11 @@ class Component extends DCLogic {
       groups.forEach(g => {
         for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
           const key = [g[i].name, g[j].name].sort().join("|");
-          if (set[key]) soft += 6;
+          if (set[key]) repeatPairs++;
         }
       });
     }
-    return { violations: violations, total: violations * 1000 + soft };
+    return { violations: violations, genderViolations: genderViolations, genderPenalty: genderPenalty, repeatPairs: repeatPairs };
   }
 
   pairsOf(groups) {
@@ -478,17 +504,25 @@ class Component extends DCLogic {
     if (this.state.students.length < 2) { this.say("먼저 학생 명단을 적용해 주세요.", "error"); return; }
     const mode = this.effMode();
     const gCount = this.state.groupCount;
-    let best = null, bestScore = Infinity, tries = 0;
+    let best = null, tries = 0;
     while (tries < 8000) {
       tries++;
-      const groups = this.attempt(mode, gCount);
+      // 필수 짝 조건이 균등 성비와 충돌할 때도 후보를 확인하되,
+      // 필수 조건 → 성별 조건 → 지난 짝 순으로 비교하고 남은 조건을 알린다.
+      const fallback = this.state.constraints.length && tries % 8 === 0 && (mode === "mix" || mode === "any" && this.state.ruleMin2);
+      const groups = fallback
+        ? this.dealRoundRobin(this.shuffle(this.state.students), this.computePlan(mode, gCount).sizes)
+        : this.attempt(mode, gCount);
       const sc = this.score(groups, mode);
-      if (sc.total < bestScore) { bestScore = sc.total; best = { groups: groups, v: sc.violations, tries: tries, score: sc.total }; }
-      if (bestScore === 0) break;
-      if (best.v === 0 && tries > 2500) break;
+      const rank = [sc.violations, sc.genderViolations, sc.genderPenalty, sc.repeatPairs];
+      if (!best || rank.some((value, i) => value < best.rank[i] && rank.slice(0, i).every((prior, j) => prior === best.rank[j]))) {
+        best = { groups: groups, v: sc.violations, gender: sc.genderViolations, repeat: sc.repeatPairs, rank: rank };
+      }
+      if (rank.every(value => value === 0)) break;
+      if (best.v === 0 && best.gender === 0 && tries > 2500) break;
     }
     clearInterval(this.timer);
-    this.setState({ groups: best.groups, reveal: 0, lastTries: best.tries, lastViolations: best.v });
+    this.setState({ groups: best.groups, reveal: 0, lastTries: tries, lastViolations: best.v, lastGenderViolations: best.gender, lastRepeatViolations: best.repeat });
     this.timer = setInterval(() => {
       this.setState(s => {
         if (!s.groups || s.reveal >= s.groups.length) { clearInterval(this.timer); return {}; }
@@ -498,13 +532,13 @@ class Component extends DCLogic {
     const pairs = this.pairsOf(best.groups);
     this.setState({ prevPairs: pairs });
     try { localStorage.setItem("jaripick.prevpairs.v1", JSON.stringify(pairs)); } catch (e) {}
-    if (best.v === 0) {
-      this.say(best.tries + "번째 시도에서 모든 제한 조건을 만족하는 배치를 찾았습니다.", "ok");
+    if (best.v === 0 && best.gender === 0 && best.repeat === 0) {
+      this.say(tries + "회 탐색에서 모든 제한 조건을 만족하는 배치를 찾았습니다.", "ok");
       if (this.props.cheerOnSuccess !== false) {
         try { const a = new Audio("cheer.mp3"); a.volume = 0.7; a.play(); } catch (e) {}
       }
     } else {
-      this.say("제한 조건을 모두 만족시킬 수 없어 위반 " + best.v + "건이 남은 최선의 배치를 보여줍니다. 모둠 수를 늘리거나 조건을 줄여 보세요.", "error");
+      this.say(tries + "회 탐색에서 모든 조건을 충족한 배치를 찾지 못했습니다. 확인한 후보 중 필수 조건 위반 " + best.v + "건 · 성별 조건 미충족 " + best.gender + "건 · 지난 짝 겹침 " + best.repeat + "쌍인 배치를 보여줍니다. 명단의 성비·모둠 수·제한 조건을 확인해 주세요.", "error");
     }
   };
 
@@ -849,7 +883,7 @@ class Component extends DCLogic {
 
     const min2Option = {
       label: (s.ruleMin2 ? "✓ " : "") + "각 모둠 남·여 2명 이상",
-      hint: "4명 이상 모둠에 남녀가 각각 2명 이상 들어가도록",
+      hint: "각 모둠에 남녀 각각 2명 이상 (4명 미만 모둠은 미충족)",
       style: pill(s.ruleMin2, "wide"), click: () => this.setState({ ruleMin2: !s.ruleMin2, groups: null })
     };
 
@@ -884,8 +918,8 @@ class Component extends DCLogic {
       ? this.modeLabel() + " · " + plan.groups + "모둠 · 모둠당 " + plan.sizes.join("·") + "명"
         + (mode === "solo" && plan.minority
           ? (males.length === females.length
-            ? " (남녀 수가 같아 " + plan.minority + "학생을 모둠마다 고르게 나눕니다)"
-            : " (각 모둠에 " + plan.minority + "학생 최소 1명, 나머지는 고르게)")
+            ? " (남녀 수가 같아 남학생을 기준으로 모둠마다 정확히 1명 조건을 확인합니다)"
+            : " (각 모둠에 " + plan.minority + "학생 정확히 1명 · 인원과 모둠 수가 맞지 않으면 미충족)")
           : "")
       : "명단을 적용하면 학생 수에 맞춰 모둠이 자동으로 계산됩니다.";
 
@@ -950,7 +984,9 @@ class Component extends DCLogic {
       planText: planText,
       note: s.note, hasNote: !!s.note, noteStyle: noteStyle,
       hasGroups: groups.length > 0, groupCards: groupCards,
-      resultMeta: groups.length ? this.modeLabel() + " · " + s.lastTries + "회 시도" + (s.lastViolations ? " · 조건 위반 " + s.lastViolations + "건" : " · 조건 완전 충족") : "",
+      resultMeta: groups.length ? this.modeLabel() + " · " + s.lastTries + "회 시도" + (s.lastViolations || s.lastGenderViolations || s.lastRepeatViolations
+        ? " · 필수 조건 위반 " + s.lastViolations + "건 · 성별 조건 미충족 " + s.lastGenderViolations + "건 · 지난 짝 겹침 " + s.lastRepeatViolations + "쌍"
+        : " · 조건 완전 충족") : "",
       slots: slotNames.map(n => ({ label: n, load: () => this.loadSlot(n), remove: () => this.removeSlot(n) })),
       hasSlots: slotNames.length > 0,
       applyRoster: this.applyRoster, clearRoster: this.clearRoster,
