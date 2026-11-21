@@ -17,19 +17,41 @@
  let resizePending=false;
  const resize=()=>{if(resizePending)return;resizePending=true;requestAnimationFrame(()=>{resizePending=false;send('baeumgil:resize');});};
  addEventListener('message',event=>{
-  if(!parentOrigin||event.origin!==parentOrigin||event.source!==parent||!event.data||event.data.type!=='baeumgil:theme'||!['light','dark'].includes(event.data.theme))return;
-  root.dataset.theme=event.data.theme;
+  if(!parentOrigin||event.origin!==parentOrigin||event.source!==parent||!event.data)return;
+  if(event.data.type==='baeumgil:language')globalThis.GroupLanguage?.setLanguage(event.data.language);
+  if(event.data.type==='baeumgil:theme'&&['light','dark'].includes(event.data.theme))root.dataset.theme=event.data.theme;
  });
  const init=()=>{
   const preferences=document.createElement('div');preferences.className='tool-preferences';
   const theme=document.createElement('button');theme.type='button';theme.textContent='화면 테마 바꾸기';theme.onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';};
   const print=document.createElement('button');print.type='button';print.textContent='인쇄';print.onclick=()=>window.print();preferences.append(theme,print);document.body.append(preferences);
+  const i18n=globalThis.GroupLanguage;
+  const selector=document.createElement('select');
+  if(i18n&&!embedded){
+   i18n.languages.forEach((code,i)=>selector.append(new Option(i18n.nativeNames[i],code)));
+   selector.onchange=()=>{
+    i18n.setLanguage(selector.value);
+    const url=new URL(location.href);url.searchParams.set('lang',i18n.language);
+    history.replaceState(history.state,'',url);
+   };
+   preferences.prepend(selector);
+  }
   const feedback=document.createElement('p');feedback.className='tool-feedback';feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');document.body.prepend(feedback);
-  let drawPending=false,timeout;
+  let drawPending=false,timeout,statusKey='';
+  const showStatus=(key,fallback)=>{statusKey=key;feedback.textContent=i18n?.text(key)??fallback;};
+  const syncLabels=()=>{
+   if(!i18n)return;
+   theme.textContent=i18n.text('theme');print.textContent=i18n.text('print');
+   selector.setAttribute('aria-label',i18n.text('language'));selector.value=i18n.language;
+   const skip=document.querySelector('.tool-skip');if(skip)skip.textContent=i18n.text('skip');
+   if(statusKey)feedback.textContent=i18n.text(statusKey);
+   document.querySelectorAll('.tool-result-board').forEach(board=>board.setAttribute('aria-label',i18n.text('preview')));
+  };
+  syncLabels();addEventListener('group-language-change',syncLabels);
   document.addEventListener('click',event=>{
    if(!event.target.closest?.('.tool-draw'))return;
-   drawPending=true;feedback.textContent='배치 결과를 확인하고 있습니다.';
-   clearTimeout(timeout);timeout=setTimeout(()=>{drawPending=false;feedback.textContent='안내 메시지와 배치 결과를 확인해 주세요.';},1800);
+   drawPending=true;showStatus('checking','배치 결과를 확인하고 있습니다.');
+   clearTimeout(timeout);timeout=setTimeout(()=>{drawPending=false;showStatus('checkResult','안내 메시지와 배치 결과를 확인해 주세요.');},1800);
   },true);
   let ready=false,observedMain=null;
   const sizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(resize):null;
@@ -37,8 +59,8 @@
    const main=document.querySelector('#dc-root #tool-main');
    if(main&&main!==observedMain){if(observedMain)sizeObserver?.unobserve(observedMain);observedMain=main;sizeObserver?.observe(main);}
    if(main&&!ready){ready=true;send('baeumgil:ready');}
-   document.querySelectorAll('.tool-result-board').forEach(board=>{board.tabIndex=0;board.setAttribute('role','region');board.setAttribute('aria-label','자리 배치 미리보기. 가로·세로로 스크롤할 수 있습니다.');});
-   if(drawPending&&document.querySelector('#dc-root [data-tool-result]')){drawPending=false;clearTimeout(timeout);feedback.textContent='새 배치를 만들었습니다. 조건 충족 여부와 결과를 확인해 주세요.';}
+   document.querySelectorAll('.tool-result-board').forEach(board=>{board.tabIndex=0;board.setAttribute('role','region');board.setAttribute('aria-label',i18n?.text('preview')??'자리 배치 미리보기. 가로·세로로 스크롤할 수 있습니다.');});
+   if(drawPending&&document.querySelector('#dc-root [data-tool-result]')){drawPending=false;clearTimeout(timeout);showStatus('created','새 배치를 만들었습니다. 조건 충족 여부와 결과를 확인해 주세요.');}
    resize();
   };
   new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
